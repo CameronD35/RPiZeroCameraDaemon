@@ -166,21 +166,33 @@ int main(int argc, char** argv) {
     char* fullFilename = strcat(curTime, fileExtension);
 
     // This is the daemon part
-    // while (true) {
+    while (true) {
 
-    //     pid_t pid = fork();
+        // Create child process
+        pid_t pid = fork();
 
-    //     checkErr(pid, "Error initializing process fork.", ERR_PROCESS_FORK, true);
+        // Check to see if errors occured during process creation
+        checkErr(pid, "Error initializing process fork.", ERR_PROCESS_FORK, true);
 
-    //     if (pid == 0) {
-    //         execlp("libcamera-jpeg", "libcamera-jpeg", "-o", fullFilename, NULL);
-    //         wait(NULL);
-    //         exit(0);
-    //     }
+        // Wait on the child process 
+        waitpid(pid, NULL, 0);
 
+        // Since the fork() command returns 0 to the child process and the child pid to the parent
+        // We use the following condition to see whether we are in the child or parent process
+        
+        // If we are in the child process we will execute our desired command
+        if (pid == 0) {
+            printf("%i: We good.\n", getpid());
+            //execlp("libcamera-jpeg", "libcamera-jpeg", "-o", fullFilename, NULL);
+            usleep(2000000);
+            //wait(NULL);
+            exit(0);
+        }
 
+        // Does something if we are in the parent process
+        if (pid != 0) {
+            printf("%i: I'M BACK!!!!!!!!!!!!!!!!!!!!!!!\n", getpid());
+        }
 
-    // }
-
-    //printf("I'M BACK!!!!!!!!!!!!!!!!!!!!!!!");
+    }
 }
