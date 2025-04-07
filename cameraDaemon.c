@@ -31,7 +31,8 @@ void checkErr(int varToCheck, char* errorDesc, int errCode, bool ignore) {
 
 }
 
-// Not in use for now
+// Processes an argument
+// For now, it only accepts -i and -v
 char* processArgument(char* argument) {  
 
     // strcmp function returns 0 when the two strings are the same (which is kinda weird ngl)
@@ -44,6 +45,7 @@ char* processArgument(char* argument) {
     }
 }
 
+// Gets current time and returns it the time formatted as WWW MMM DD HH:MM:SS YYYY
 char* getCurrentTime(void) {
 
     // https://www.geeksforgeeks.org/time-h-header-file-in-c-with-examples/
@@ -133,6 +135,11 @@ int doesDirectoryExist(char* path) {
 
 }
 
+/*
+-- ARGS --
+-i: take an image using the camera
+-v: take a video using the camera
+*/
 int main(int argc, char** argv) {
 
     // We only want one argument too avoid a bozo putting -i and -v
@@ -160,6 +167,8 @@ int main(int argc, char** argv) {
     // gets current local time
     char* curTime = getCurrentTime();
 
+    // remove spaces from time to prevent an UGLY file name
+    // trust me, you do NOT want to see the monstrousity that exists without this
     removeSpaces(curTime);
 
     // Concatenate fileExtension
