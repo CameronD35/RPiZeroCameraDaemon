@@ -10,8 +10,10 @@
 #include <sys/wait.h>
 
 #define ERR_TOO_FEW_OR_MANY_ARGS 1
-#define ERR_PROCESS_FORK 2
-#define ERR_INVALID_DIR 3
+#define ERR_INVALID_ARG 2
+#define ERR_PROCESS_FORK 3
+#define ERR_INVALID_DIR 4
+#define ERR_BASH_SCRIPT 5
 #define DELAY_MS 100
 
 // MAIN AT BOTTOM
@@ -33,12 +35,33 @@ void checkErr(int varToCheck, char* errorDesc, int errCode, bool ignore) {
 
 // Processes an argument
 // For now, it only accepts -i and -v
-char* processArgument(char* argument) {  
+// If you wish to store additional info in another variable, provide another char* variable
+char* processArgument(char* argument/*, char* argDescReturnVar*/) {  
+
+    char argFirstChar = argument[0];
+
+    // ASCII code for dash character
+    const char dash = 0x0000002D;
+    
+    int isArgumentDash = (argFirstChar == dash);
+
+    if (isArgumentDash) {
+
+        
+        
+    } else {
+
+        fprintf(stderr, "Invalid argument.\n");
+        exit(ERR_INVALID_ARG);
+
+    }
 
     // strcmp function returns 0 when the two strings are the same (which is kinda weird ngl)
-    int isNotVideoArgument = (strcmp(argument, "-v"));
+    // However it's because the difference is ASCII values is 0 (kinda cool ngl)
+    int isVideoArgument = !(strcmp(argument, "-v"));
 
-    if (!isNotVideoArgument) {
+    if (isVideoArgument) {
+        //argDescReturnVar = "video";
         return ".h264";
     } else {
         return ".jpg";
@@ -90,7 +113,7 @@ int removeSpaces(char* str) {
         // ASCII code for newline character
         const char newline = 0x0000000A;
 
-        // If the current character equals a space
+        // If the current character equals a space (or a colon or newline)
         int isSpace = (currChar == space) || (currChar == colon) || (currChar == newline);
 
         if (!isSpace) {
@@ -151,28 +174,15 @@ int main(int argc, char** argv) {
 
     }
 
-    char* fileExtension;
+    char* argument = argv[1];
 
-    char* argument = argv[0];
-
-    int isArgumentDash = (strcmp(argument, "-v"));
-
-    // "-" implies that an option/flag was passed
-    if (isArgumentDash) {
-
-        fileExtension = processArgument(argument);
-        
-    }
+    // Based on the argument passed
+    // Error handling is within the processArgument() function
+    char* fileExtension = processArgument(argument);
 
     // gets current local time
     char* curTime = getCurrentTime();
 
-    // remove spaces from time to prevent an UGLY file name
-    // trust me, you do NOT want to see the monstrousity that exists without this
-    removeSpaces(curTime);
-
-    // Concatenate fileExtension
-    char* fullFilename = strcat(curTime, fileExtension);
 
     // This is the daemon part
     while (true) {
@@ -191,16 +201,47 @@ int main(int argc, char** argv) {
         
         // If we are in the child process we will execute our desired command
         if (pid == 0) {
-            printf("%i: We good.\n", getpid());
-            //execlp("libcamera-jpeg", "libcamera-jpeg", "-o", fullFilename, NULL);
+
+            char* curTime = getCurrentTime();
+
+            // remove spaces from time to prevent an UGLY file name
+            // trust me, you do NOT want to see the monstrousity that exists without this
+            removeSpaces(curTime);
+
+            // Concatenate fileExtension
+            char* fullFilename = strcat(curTime, fileExtension);
+
+            //printf("%i: We good.\n", getpid());
+            //printf("%s\n", fileExtension);
+            printf("%i\n", strcmp(fileExtension, ".jpg"));
+
+            int isPhoto = !(strcmp(fileExtension, ".jpg"));
+
+            if (isPhoto) {
+
+                //printf("taking photo\n");
+                int bashScript = execlp("libcamera-jpeg", "libcamera-jpeg", "-o", fullFilename, "-t", "500", NULL);
+
+                checkErr(bashScript, "Error executing bash script.", ERR_BASH_SCRIPT, true);
+
+            } else {
+
+                //printf("taking video\n");
+                int bashScript = execlp("libcamera-vid", "libcamera-vid", "-o", fullFilename, "-t", "2000", NULL);
+
+                checkErr(bashScript, "Error executing bash script.", ERR_BASH_SCRIPT, true);
+
+            }
+
             usleep(2000000);
+            printf("Captured -- with filename %s\n", fullFilename);
             //wait(NULL);
             exit(0);
         }
 
         // Does something if we are in the parent process
         if (pid != 0) {
-            printf("%i: I'M BACK!!!!!!!!!!!!!!!!!!!!!!!\n", getpid());
+            NULL;
         }
 
     }
