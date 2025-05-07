@@ -1,4 +1,4 @@
 all: cameraDaemon
 
-networkChecker:
+cameraDaemon:
 	gcc cameraDaemon.c -o build/cameraDaemond

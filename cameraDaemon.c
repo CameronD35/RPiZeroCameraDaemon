@@ -14,6 +14,7 @@
 #define ERR_PROCESS_FORK 3
 #define ERR_INVALID_DIR 4
 #define ERR_BASH_SCRIPT 5
+#define ERR_DIR_NOT_EXIST 6
 #define DELAY_MS 100
 
 // MAIN AT BOTTOM
@@ -132,6 +133,36 @@ int removeSpaces(char* str) {
 
 }
 
+int replaceSpaces(char* str, char replacement) {
+
+    const int stringLen = strlen(str);
+
+    for (int i = 0; i < stringLen; i++) {
+
+        // Current character in the string
+        char currChar = str[i];
+
+        // ASCII code for space character
+        const char space = 0x00000020;
+
+        // ASCII code for colon character
+        const char colon = 0x0000003A;
+
+        // If the current character equals a space (or a colon)
+        int isSpace = (currChar == space) || (currChar == colon);
+
+        if (isSpace) {
+            str[i] = replacement;
+        }
+    }
+
+    // appends null terminator to end (replaces the newline character)
+    str[stringLen-1] = '\0';
+
+    return 0;
+
+}
+
 // https://codeforwin.org/c-programming/c-program-check-file-or-directory-exists-not
 int doesDirectoryExist(char* path) {
 
@@ -158,6 +189,12 @@ int doesDirectoryExist(char* path) {
 
 }
 
+int sleep_sec(int time_sec) {
+    usleep(1000000 * time_sec);
+    
+    return 0;
+}
+
 /*
 -- ARGS --
 -i: take an image using the camera
@@ -166,15 +203,27 @@ int doesDirectoryExist(char* path) {
 int main(int argc, char** argv) {
 
     // We only want one argument too avoid a bozo putting -i and -v
-    if (argc != 2) {
+    if (argc != 4) {
 
-        fprintf(stderr, "Too few or too many arguments, please pass in one argument.\n");
+        fprintf(stderr, "Too few or too many arguments, please pass in three arguments in the form: (-i | -v), int captureInterval_ms, string outputDirectory.\n");
 
         exit(ERR_TOO_FEW_OR_MANY_ARGS);
 
     }
 
     char* argument = argv[1];
+
+    // atoi() function converts the string to an integer
+    // This is the length the camera will captur before saving the file and starting a new capture
+    char* captureInterval_str = argv[2];
+    int captureInterval = atoi(argv[2]);
+    
+
+    char* outputDirectory = argv[3];
+
+    // Check to see if the directory does not exist
+    // If not, the program will not function rpoperly, so it quits
+    checkErr(doesDirectoryExist(outputDirectory), "Provided directory does not exist.", ERR_DIR_NOT_EXIST, false);
 
     // Based on the argument passed
     // Error handling is within the processArgument() function
@@ -204,37 +253,40 @@ int main(int argc, char** argv) {
 
             char* curTime = getCurrentTime();
 
+            // ASCII code for dash
+            char dash = 0x0000002D;
+
             // remove spaces from time to prevent an UGLY file name
             // trust me, you do NOT want to see the monstrousity that exists without this
-            removeSpaces(curTime);
+            replaceSpaces(curTime, dash);
 
             // Concatenate fileExtension
             char* fullFilename = strcat(curTime, fileExtension);
+            
+            char* fullFilePath = strcat(outputDirectory, fullFilename);
 
-            //printf("%i: We good.\n", getpid());
-            //printf("%s\n", fileExtension);
-            printf("%i\n", strcmp(fileExtension, ".jpg"));
+            //printf("%s\n", fullFilePath);
 
             int isPhoto = !(strcmp(fileExtension, ".jpg"));
 
             if (isPhoto) {
 
                 //printf("taking photo\n");
-                int bashScript = execlp("libcamera-jpeg", "libcamera-jpeg", "-o", fullFilename, "-t", "500", NULL);
+                int bashScript = execlp("libcamera-jpeg", "libcamera-jpeg", "-o", fullFilePath, "-t", captureInterval_str, NULL);
 
                 checkErr(bashScript, "Error executing bash script.", ERR_BASH_SCRIPT, true);
 
             } else {
 
                 //printf("taking video\n");
-                int bashScript = execlp("libcamera-vid", "libcamera-vid", "-o", fullFilename, "-t", "2000", NULL);
+                int bashScript = execlp("libcamera-vid", "libcamera-vid", "-o", fullFilePath, "-t", captureInterval_str, NULL);
 
                 checkErr(bashScript, "Error executing bash script.", ERR_BASH_SCRIPT, true);
 
             }
 
-            usleep(2000000);
-            printf("Captured -- with filename %s\n", fullFilename);
+            usleep(500);
+            printf("Captured %s with filename %s\n", argument, fullFilename);
             //wait(NULL);
             exit(0);
         }
@@ -245,4 +297,6 @@ int main(int argc, char** argv) {
         }
 
     }
+
+    return 0;
 }

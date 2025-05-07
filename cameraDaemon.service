@@ -1,0 +1,9 @@
+[Unit]
+Description=Daemon for capturing video using connected camera.
+
+[Service]
+Type=SIMPLE
+ExecStart=/home/raspberry/software/cameraDaemond -v 45000 /home/raspberry/videos
+
+[Install]
+WantedBy=multi-user.target
